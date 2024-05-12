@@ -1,0 +1,61 @@
+    <!-- yossi hadad -312588288 , yarin haronov - 318467206 -->
+    <!DOCTYPE html>
+    <html lang="he">
+    <head>
+        <meta charset="UTF-8">
+        <!-- Set the viewport to ensure your site scales correctly on different devices -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>הרשמה למועדון</title>
+        <!-- Link to an external CSS for styling -->
+        <link rel="stylesheet" href="styles.css">
+        <!-- Favicon for the website -->
+        <link rel="icon" type="image/png" href="favicon.png">
+    </head>
+    <body dir="rtl"> <!-- dir="rtl" sets the text direction to right-to-left for Hebrew -->
+    
+        <!-- Header section with logo and welcome message -->
+        <header>
+            <img src="https://simania.co.il/bookimages/covers8/84834.jpg" alt="לוגו של מיצי-נט" >
+            <p>ברוכים הבאים למועדון לקוחות שלנו. הצטרפו עכשיו ותהנו מהטבות בלעדיות!</p>
+        </header>
+    
+        <!-- Registration form section -->
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="firstName">שם פרטי:</label>
+                <input type="text" id="firstName" name="firstName" required>
+                <label for="lastName">שם משפחה:</label>
+                <input type="text" id="lastName" name="lastName" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">מספר טלפון:</label>
+                <input type="tel" id="phone" name="phone" pattern="[0-9]{10}" required title="מספר טלפון לא תקין">
+                <small id="phone-error" class="error-message"></small>
+            </div>
+            <div class="form-group">
+                <label for="email">כתובת אימייל:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">סיסמה:</label>
+                <input type="password" id="password" name="password" minlength="8" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">וידוא סיסמה:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" minlength="8" required>
+            </div>
+            <div class="comments">
+                <!-- Error message display if passwords do not match -->
+                <div><span id="password-comment">סיסמאות לא זהות</span></div>
+            </div>
+            
+            <!-- Submit button for the form -->
+            <button type="submit">הרשמה</button>
+        </form>
+    
+        <!-- Link to an external JavaScript file for form handling -->
+        <script src="script.js"></script>
+        
+    </body>
+    </html>
+    
