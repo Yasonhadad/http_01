@@ -1,104 +1,284 @@
-/* yossi hadad -312588288 , yarin haronov - 318467206 */
+:root {
+    color-scheme: light;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #121521;
+    --muted: #616b80;
+    --accent: #3a57e8;
+    --border: #dde3f0;
+    --green-bg: #dcfce7;
+    --green-text: #166534;
+    --yellow-bg: #fef9c3;
+    --yellow-text: #854d0e;
+    --orange-bg: #ffedd5;
+    --orange-text: #9a3412;
+    --red-bg: #fee2e2;
+    --red-text: #991b1b;
+}
 
-
-/* Universal box-sizing to include padding and border in the element's total width and height */
 * {
     box-sizing: border-box;
-    margin: 0; /* Remove default margin */
-    padding: 0; /* Remove default padding */
 }
 
-/* Styling for the body element */
 body {
-    font-family: Arial, sans-serif; /* Set the font for the content */
-    background-color: burlywood; /* Set the background color */
-    padding: 20px; /* Add padding around the content */
+    margin: 0;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
 }
 
-/* Header styling */
-header {
-    text-align: center; /* Center-align text within the header */
-    margin-bottom: 20px; /* Space below the header */
+.app-shell {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px 12px 36px;
 }
 
-/* Styling for the logo image in the header */
-header img {
-    width: 150px; /* Set a fixed width */
-    height: auto; /* Maintain aspect ratio */
+.app-header {
+    padding: 4px 4px 16px;
 }
 
-/* Styling for the form */
-form {
-    max-width: 400px; /* Max width to limit form size */
-    margin: 0 auto; /* Center the form horizontally */
-    background-color: #fff; /* Background color of the form */
-    padding: 20px; /* Padding inside the form */
-    border-radius: 8px; /* Rounded corners */
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow around the form */
+.eyebrow {
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
-/* Styling for individual form groups */
-.form-group {
-    margin-bottom: 15px; /* Space below each form group */
-    display: flex; /* Enable flexbox layout */
-    flex-direction: row; /* Arrange children in a row */
-    justify-content: space-between; /* Space between the form elements */
+.app-header h1 {
+    margin: 0;
+    font-size: 1.55rem;
 }
 
-/* Styling for labels */
-label {
-    display: block; /* Block display to take up the full width */
-    font-weight: bold; /* Make the font bold */
-    margin-bottom: 5px; /* Space below the label */
-    flex: 1; /* Labels take up available space */
-    margin-right: 10px; /* Space between label and its corresponding input */
+.subtitle {
+    margin: 8px 0 0;
+    color: var(--muted);
+    line-height: 1.35;
 }
 
-/* Generic input styling for text, telephone, email, and password fields */
-input[type="text"],
-input[type="tel"],
-input[type="email"],
-input[type="password"] {
-    width: 100%; /* Full width of their container */
-    padding: 10px; /* Padding inside the input */
-    border: 1px solid #ccc; /* Border color */
-    border-radius: 5px; /* Rounded borders */
+.feed-controls {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-bottom: 14px;
+    padding: 2px;
 }
 
-/* Styling for the submit button */
-button[type="submit"] {
-    width: 100%; /* Full width of its container */
-    padding: 10px; /* Padding inside the button */
-    background-color: #4caf50; /* Background color */
-    color: #fff; /* Text color */
-    border: none; /* No border */
-    border-radius: 5px; /* Rounded corners */
-    cursor: pointer; /* Pointer cursor on hover */
-    transition: background-color 0.3s ease; /* Smooth transition for background color */
+.filter-chip {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
-/* Hover effect for the submit button */
-button[type="submit"]:hover {
-    background-color: #45a049; /* Darker green on hover */
+.filter-chip.active {
+    background: #ebeeff;
+    border-color: #bdc7ff;
+    color: #1f3bcf;
 }
 
-/* Hover effect for inputs */
-.form-group input:hover {
-    border-color: orange; /* Change border color to orange on hover */
+.feed {
+    display: grid;
+    gap: 12px;
 }
 
-/* Styling for comments section, initially hidden */
-.comments {
-    visibility: hidden; /* Hide the comments by default */
-    color: red; /* Set the text color to red */
+.property-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 4px 20px rgba(24, 39, 75, 0.06);
 }
 
-/* Styling for invalid input fields */
-#firstName:invalid,
-#lastName:invalid,
-#phone:invalid,
-#email:invalid,
-#password:invalid,
-#confirmPassword:invalid {
-    border: 2px solid red; /* Highlight invalid fields with a red border */
+.card-topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.age-tag,
+.confidence-pill {
+    font-size: 0.74rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 5px 10px;
+}
+
+.age-tag.green {
+    background: var(--green-bg);
+    color: var(--green-text);
+}
+
+.age-tag.yellow {
+    background: var(--yellow-bg);
+    color: var(--yellow-text);
+}
+
+.age-tag.orange {
+    background: var(--orange-bg);
+    color: var(--orange-text);
+}
+
+.age-tag.red {
+    background: var(--red-bg);
+    color: var(--red-text);
+}
+
+.confidence-pill {
+    background: #eef2ff;
+    color: #3730a3;
+}
+
+.property-price {
+    margin: 0;
+    font-size: 1.4rem;
+    line-height: 1.15;
+}
+
+.property-location,
+.property-specs {
+    margin: 7px 0 0;
+    color: #313a4e;
+}
+
+.timeline,
+.source-section {
+    margin-top: 14px;
+}
+
+.timeline h3,
+.source-section h3 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+}
+
+.timeline-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.timeline-grid .label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.77rem;
+    margin-bottom: 3px;
+}
+
+.source-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.source-link {
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.84rem;
+    color: var(--text);
+}
+
+.source-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    color: #fff;
+    font-weight: 700;
+}
+
+.source-facebook .source-icon {
+    background: #1877f2;
+}
+
+.source-yad2 .source-icon {
+    background: #f97316;
+}
+
+.source-madlan .source-icon {
+    background: #2563eb;
+}
+
+.history-panel {
+    margin-top: 12px;
+    border-top: 1px solid #eef2f7;
+    padding-top: 10px;
+}
+
+.history-panel summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.price-history {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: #2c364a;
+}
+
+.price-history li + li {
+    margin-top: 4px;
+}
+
+.crm-actions {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.crm-actions button {
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 8px 7px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #24324d;
+}
+
+.crm-actions button.active {
+    background: #e6f0ff;
+    border-color: #96b8ff;
+    color: #1d4ed8;
+}
+
+.property-card.muted {
+    opacity: 0.7;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 28px 14px;
+    color: var(--muted);
+}
+
+@media (min-width: 760px) {
+    .app-shell {
+        padding-top: 24px;
+    }
+
+    .feed {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .property-card {
+        min-height: 100%;
+    }
 }
