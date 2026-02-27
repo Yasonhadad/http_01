@@ -21,6 +21,12 @@
             <button class="filter-chip" type="button" data-filter="fresh">Fresh (&lt;24h)</button>
             <button class="filter-chip" type="button" data-filter="watch">1-2 weeks</button>
             <button class="filter-chip" type="button" data-filter="stale">&gt;1 month</button>
+            <button id="refresh-feed" class="filter-chip refresh-chip" type="button">Refresh</button>
+        </section>
+
+        <section class="connection-banner" aria-live="polite">
+            <strong>Data source:</strong>
+            <span id="connection-status">Initializing...</span>
         </section>
 
         <section id="feed" class="feed" aria-live="polite"></section>
@@ -69,6 +75,7 @@
         </article>
     </template>
 
+    <script src="app-config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

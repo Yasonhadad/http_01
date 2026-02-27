@@ -1,4 +1,5 @@
 const STORAGE_KEY = "the-one.crm-state.v1";
+const DEFAULT_SOURCE_ICON = { label: "Source", icon: "?", className: "" };
 
 const SOURCE_META = {
     facebook: { label: "Facebook", icon: "f", className: "source-facebook" },
@@ -6,166 +7,354 @@ const SOURCE_META = {
     madlan: { label: "Madlan", icon: "M", className: "source-madlan" }
 };
 
-const now = Date.now();
-const hoursAgo = (hours) => new Date(now - hours * 60 * 60 * 1000).toISOString();
-const daysAgo = (days) => hoursAgo(days * 24);
+const APP_CONFIG = sanitizeConfig(window.THE_ONE_CONFIG || {});
 
-const rawListings = [
-    {
-        source: "facebook",
-        sourceListingId: "fb-9301",
-        deepLink: "https://facebook.com/groups/tel-aviv-rentals/posts/fb-9301",
-        city: "Tel Aviv",
-        neighborhood: "Florentin",
-        address: "32 Herzl Street",
-        floor: 2,
-        rooms: 3,
-        sqm: 68,
-        priceIls: 7600,
-        imageHashes: ["img-a1", "img-a2", "img-a3"],
-        firstSpottedAt: hoursAgo(11),
-        lastBumpedAt: hoursAgo(2),
-        priceHistory: [
-            { at: daysAgo(6), priceIls: 7900 },
-            { at: daysAgo(3), priceIls: 7800 },
-            { at: hoursAgo(11), priceIls: 7600 }
-        ]
-    },
-    {
-        source: "yad2",
-        sourceListingId: "y2-55812",
-        deepLink: "https://www.yad2.co.il/item/y2-55812",
-        city: "Tel Aviv",
-        neighborhood: "Florentin",
-        address: "32 Herzl St",
-        floor: 2,
-        rooms: 3,
-        sqm: 69,
-        priceIls: 7600,
-        imageHashes: ["img-a2", "img-a3", "img-a4"],
-        firstSpottedAt: hoursAgo(10),
-        lastBumpedAt: hoursAgo(3),
-        priceHistory: [
-            { at: daysAgo(2), priceIls: 7700 },
-            { at: hoursAgo(10), priceIls: 7600 }
-        ]
-    },
-    {
-        source: "madlan",
-        sourceListingId: "md-11290",
-        deepLink: "https://www.madlan.co.il/listings/md-11290",
-        city: "Tel Aviv",
-        neighborhood: "Florentin",
-        address: "Herzl 32",
-        floor: 2,
-        rooms: 3,
-        sqm: 68,
-        priceIls: 7600,
-        imageHashes: ["img-a1", "img-a3", "img-a5"],
-        firstSpottedAt: hoursAgo(9),
-        lastBumpedAt: hoursAgo(1),
-        priceHistory: [{ at: hoursAgo(9), priceIls: 7600 }]
-    },
-    {
-        source: "facebook",
-        sourceListingId: "fb-9314",
-        deepLink: "https://facebook.com/groups/tel-aviv-rentals/posts/fb-9314",
-        city: "Tel Aviv",
-        neighborhood: "Ramat Aviv",
-        address: "14 Brodetsky Street",
-        floor: 5,
-        rooms: 2.5,
-        sqm: 62,
-        priceIls: 8900,
-        imageHashes: ["img-b1", "img-b2", "img-b3"],
-        firstSpottedAt: daysAgo(11),
-        lastBumpedAt: daysAgo(2),
-        priceHistory: [
-            { at: daysAgo(11), priceIls: 9200 },
-            { at: daysAgo(5), priceIls: 9000 },
-            { at: daysAgo(2), priceIls: 8900 }
-        ]
-    },
-    {
-        source: "yad2",
-        sourceListingId: "y2-55899",
-        deepLink: "https://www.yad2.co.il/item/y2-55899",
-        city: "Tel Aviv",
-        neighborhood: "Ramat Aviv",
-        address: "14 Brodetsky St.",
-        floor: 5,
-        rooms: 2.5,
-        sqm: 61,
-        priceIls: 8900,
-        imageHashes: ["img-b2", "img-b4"],
-        firstSpottedAt: daysAgo(10.5),
-        lastBumpedAt: daysAgo(1),
-        priceHistory: [
-            { at: daysAgo(4), priceIls: 9000 },
-            { at: daysAgo(1), priceIls: 8900 }
-        ]
-    },
-    {
-        source: "madlan",
-        sourceListingId: "md-11002",
-        deepLink: "https://www.madlan.co.il/listings/md-11002",
-        city: "Givatayim",
-        neighborhood: "Borlov",
-        address: "7 Weizmann Street",
-        floor: 3,
-        rooms: 3,
-        sqm: 74,
-        priceIls: 6800,
-        imageHashes: ["img-c1", "img-c2"],
-        firstSpottedAt: daysAgo(45),
-        lastBumpedAt: daysAgo(32),
-        priceHistory: [
-            { at: daysAgo(45), priceIls: 7100 },
-            { at: daysAgo(38), priceIls: 6900 },
-            { at: daysAgo(32), priceIls: 6800 }
-        ]
-    }
-];
+const state = {
+    activeFilter: "all",
+    allProperties: [],
+    crmState: loadCRMState(),
+    fallbackMode: false
+};
 
 const feedElement = document.getElementById("feed");
 const template = document.getElementById("property-card-template");
-const filterButtons = Array.from(document.querySelectorAll(".filter-chip"));
-let activeFilter = "all";
-let crmState = loadCRMState();
+const filterButtons = Array.from(document.querySelectorAll(".filter-chip[data-filter]"));
+const refreshButton = document.getElementById("refresh-feed");
+const connectionBanner = document.querySelector(".connection-banner");
+const connectionStatusElement = document.getElementById("connection-status");
 
-const unifiedProperties = deduplicateListings(rawListings).sort(
-    (a, b) => Date.parse(b.lastBumpedAt) - Date.parse(a.lastBumpedAt)
-);
+boot();
 
-renderFeed();
+function boot() {
+    attachEventListeners();
+    loadFeed();
+}
 
-filterButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-        activeFilter = button.dataset.filter || "all";
-        filterButtons.forEach((chip) => chip.classList.remove("active"));
-        button.classList.add("active");
+function attachEventListeners() {
+    filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            state.activeFilter = button.dataset.filter || "all";
+            filterButtons.forEach((chip) => chip.classList.remove("active"));
+            button.classList.add("active");
+            renderFeed();
+        });
+    });
+
+    refreshButton.addEventListener("click", () => {
+        loadFeed();
+    });
+
+    feedElement.addEventListener("click", (event) => {
+        const actionButton = event.target.closest("button[data-action]");
+        if (!actionButton) {
+            return;
+        }
+
+        const card = actionButton.closest(".property-card");
+        if (!card) {
+            return;
+        }
+
+        const propertyId = card.dataset.propertyId;
+        const selectedAction = actionButton.dataset.action;
+        const previousAction = state.crmState[propertyId];
+        const nextAction = previousAction === selectedAction ? "new" : selectedAction;
+        state.crmState[propertyId] = nextAction;
+        saveCRMState(state.crmState);
+        syncCRMStatus(propertyId, nextAction);
         renderFeed();
     });
-});
+}
 
-feedElement.addEventListener("click", (event) => {
-    const actionButton = event.target.closest("button[data-action]");
-    if (!actionButton) {
+async function loadFeed() {
+    setConnectionStatus("Loading feed...", "warn");
+
+    try {
+        if (isSupabaseConfigured()) {
+            const remoteProperties = await fetchPropertiesFromSupabase();
+            if (remoteProperties.length) {
+                state.fallbackMode = false;
+                state.allProperties = remoteProperties;
+                setConnectionStatus(`Connected to Supabase (${remoteProperties.length} properties).`, "ok");
+                renderFeed();
+                return;
+            }
+            setConnectionStatus("Supabase connected but empty feed. Showing fallback sample data.", "warn");
+        } else {
+            setConnectionStatus("Supabase not configured. Showing fallback sample data.", "warn");
+        }
+
+        state.fallbackMode = true;
+        state.allProperties = deduplicateListings(getMockListings()).sort(
+            (a, b) => Date.parse(b.lastBumpedAt) - Date.parse(a.lastBumpedAt)
+        );
+        renderFeed();
+    } catch (error) {
+        console.error("Failed to load from Supabase. Falling back to local sample.", error);
+        state.fallbackMode = true;
+        state.allProperties = deduplicateListings(getMockListings()).sort(
+            (a, b) => Date.parse(b.lastBumpedAt) - Date.parse(a.lastBumpedAt)
+        );
+        setConnectionStatus("Could not reach Supabase. Showing fallback sample data.", "error");
+        renderFeed();
+    }
+}
+
+async function fetchPropertiesFromSupabase() {
+    const fields = [
+        "id",
+        "city",
+        "neighborhood",
+        "street",
+        "building_number",
+        "floor",
+        "rooms",
+        "area_sqm",
+        "current_price_ils",
+        "first_spotted_at",
+        "last_bumped_at",
+        "dedupe_confidence",
+        "source_urls",
+        "price_history"
+    ].join(",");
+
+    const url =
+        `${APP_CONFIG.supabaseUrl}/rest/v1/properties` +
+        `?select=${encodeURIComponent(fields)}` +
+        "&order=last_bumped_at.desc" +
+        `&limit=${APP_CONFIG.feedLimit}`;
+
+    const response = await fetch(url, {
+        headers: supabaseHeaders(APP_CONFIG.supabaseAnonKey)
+    });
+
+    if (!response.ok) {
+        const message = await response.text();
+        throw new Error(`Supabase properties request failed (${response.status}): ${message}`);
+    }
+
+    const rows = await response.json();
+    if (!Array.isArray(rows)) {
+        return [];
+    }
+
+    return rows.map(mapPropertyRowToViewModel);
+}
+
+function mapPropertyRowToViewModel(row) {
+    const sourceUrls = Array.isArray(row.source_urls) ? row.source_urls : [];
+    const priceHistory = Array.isArray(row.price_history) ? row.price_history : [];
+    const street = [row.street, row.building_number].filter(Boolean).join(" ").trim();
+    const address = street || row.neighborhood || row.city || "Unknown address";
+    const fallbackDate = new Date().toISOString();
+
+    const mappedSources = sourceUrls
+        .map((entry) => ({
+            source: String(entry.source || "").toLowerCase(),
+            sourceListingId: entry.source_listing_id || entry.sourceListingId || "unknown",
+            deepLink: entry.url || entry.deep_link_url || entry.deepLink || "#",
+            firstSpottedAt: entry.first_spotted_at || entry.firstSpottedAt || row.first_spotted_at || fallbackDate,
+            lastBumpedAt: entry.last_bumped_at || entry.lastBumpedAt || row.last_bumped_at || fallbackDate
+        }))
+        .filter((entry) => entry.deepLink && entry.deepLink !== "#");
+
+    return {
+        id: row.id,
+        anchorListing: null,
+        city: row.city || "",
+        neighborhood: row.neighborhood || "",
+        address,
+        floor: row.floor ?? 0,
+        rooms: Number(row.rooms ?? 0),
+        sqm: Number(row.area_sqm ?? 0),
+        firstSpottedAt: row.first_spotted_at || fallbackDate,
+        lastBumpedAt: row.last_bumped_at || fallbackDate,
+        currentPriceIls: Number(row.current_price_ils ?? 0),
+        sourceListings: mappedSources,
+        priceHistory: normalizeRemotePriceHistory(priceHistory, mappedSources),
+        imageHashes: [],
+        matchConfidence: Number(row.dedupe_confidence ?? 0.82)
+    };
+}
+
+function normalizeRemotePriceHistory(historyEvents, sourceListings) {
+    const fallbackSource = sourceListings[0] ? sourceListings[0].source : "facebook";
+    return historyEvents
+        .map((event) => ({
+            at: event.event_at || event.at || null,
+            priceIls: Number(event.new_price_ils ?? event.price_ils ?? event.priceIls ?? 0),
+            source: String(event.source || fallbackSource).toLowerCase()
+        }))
+        .filter((event) => event.at && Number.isFinite(event.priceIls) && event.priceIls > 0)
+        .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+}
+
+function renderFeed() {
+    const visibleProperties = state.allProperties.filter((property) => {
+        if (state.activeFilter === "all") {
+            return true;
+        }
+        return computeAgeBadge(property.firstSpottedAt).bucket === state.activeFilter;
+    });
+
+    feedElement.innerHTML = "";
+
+    if (!visibleProperties.length) {
+        const emptyState = document.createElement("p");
+        emptyState.className = "empty-state";
+        emptyState.textContent = "No properties found for this filter.";
+        feedElement.appendChild(emptyState);
         return;
     }
 
-    const card = actionButton.closest(".property-card");
-    if (!card) {
+    visibleProperties.forEach((property) => {
+        const cardFragment = template.content.cloneNode(true);
+        const card = cardFragment.querySelector(".property-card");
+        card.dataset.propertyId = property.id;
+
+        const crmStatus = state.crmState[property.id] || "new";
+        if (crmStatus === "not_relevant") {
+            card.classList.add("muted");
+        }
+
+        const ageBadge = computeAgeBadge(property.firstSpottedAt);
+        const ageTag = card.querySelector(".age-tag");
+        ageTag.classList.add(ageBadge.className);
+        ageTag.textContent = ageBadge.label;
+
+        card.querySelector(".confidence-pill").textContent = `Match ${Math.round(property.matchConfidence * 100)}%`;
+        card.querySelector(".property-price").textContent = formatIls(property.currentPriceIls);
+        card.querySelector(".property-location").textContent = `${property.address}, ${property.neighborhood || property.city}`;
+        card.querySelector(".property-specs").textContent = `${property.rooms || "?"} rooms • ${property.sqm || "?"} sqm • floor ${property.floor || "?"}`;
+        card.querySelector(".first-spotted").textContent = formatDate(property.firstSpottedAt);
+        card.querySelector(".last-bumped").textContent = formatDate(property.lastBumpedAt);
+
+        const sourceList = card.querySelector(".source-list");
+        property.sourceListings.forEach((sourceListing) => {
+            sourceList.appendChild(buildSourceLink(sourceListing));
+        });
+        if (!property.sourceListings.length) {
+            sourceList.textContent = "No source links available";
+        }
+
+        const historyList = card.querySelector(".price-history");
+        if (property.priceHistory.length) {
+            property.priceHistory.slice(0, 8).forEach((event) => {
+                const item = document.createElement("li");
+                const sourceMeta = SOURCE_META[event.source] || DEFAULT_SOURCE_ICON;
+                item.textContent = `${formatDate(event.at)} - ${formatIls(event.priceIls)} (${sourceMeta.label})`;
+                historyList.appendChild(item);
+            });
+        } else {
+            const item = document.createElement("li");
+            item.textContent = "No price history data yet.";
+            historyList.appendChild(item);
+        }
+
+        card.querySelectorAll("button[data-action]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.action === crmStatus);
+        });
+
+        feedElement.appendChild(cardFragment);
+    });
+}
+
+function buildSourceLink(sourceListing) {
+    const sourceKey = String(sourceListing.source || "").toLowerCase();
+    const sourceDetails = SOURCE_META[sourceKey] || DEFAULT_SOURCE_ICON;
+    const link = document.createElement("a");
+    link.className = `source-link ${sourceDetails.className}`;
+    link.href = sourceListing.deepLink;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.innerHTML = `
+        <span class="source-icon">${escapeHTML(sourceDetails.icon)}</span>
+        <span>${escapeHTML(sourceDetails.label)}</span>
+    `;
+    return link;
+}
+
+async function syncCRMStatus(propertyId, status) {
+    if (!isRemoteCRMSyncEnabled() || state.fallbackMode) {
         return;
     }
 
-    const propertyId = card.dataset.propertyId;
-    const selectedAction = actionButton.dataset.action;
-    const previousAction = crmState[propertyId];
-    crmState[propertyId] = previousAction === selectedAction ? "new" : selectedAction;
-    saveCRMState(crmState);
-    renderFeed();
-});
+    const payload = [
+        {
+            user_id: APP_CONFIG.userId,
+            property_id: propertyId,
+            status
+        }
+    ];
+
+    try {
+        const response = await fetch(
+            `${APP_CONFIG.supabaseUrl}/rest/v1/user_property_crm?on_conflict=user_id,property_id`,
+            {
+                method: "POST",
+                headers: {
+                    ...supabaseHeaders(APP_CONFIG.supabaseAnonKey),
+                    "Content-Type": "application/json",
+                    Prefer: "resolution=merge-duplicates,return=minimal"
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        if (!response.ok) {
+            const message = await response.text();
+            console.warn(`CRM sync failed (${response.status}): ${message}`);
+        }
+    } catch (error) {
+        console.warn("CRM sync failed with network error.", error);
+    }
+}
+
+function setConnectionStatus(message, tone) {
+    connectionStatusElement.textContent = message;
+    connectionBanner.classList.remove("ok", "warn", "error");
+    if (tone) {
+        connectionBanner.classList.add(tone);
+    }
+}
+
+function supabaseHeaders(apiKey) {
+    return {
+        apikey: apiKey,
+        Authorization: `Bearer ${apiKey}`
+    };
+}
+
+function isSupabaseConfigured() {
+    return Boolean(APP_CONFIG.supabaseUrl && APP_CONFIG.supabaseAnonKey);
+}
+
+function isRemoteCRMSyncEnabled() {
+    return isSupabaseConfigured() && APP_CONFIG.crmSync && APP_CONFIG.userId;
+}
+
+function sanitizeConfig(rawConfig) {
+    const config = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
+    const defaultFeedLimit = 80;
+    const isPlaceholder = (value) =>
+        typeof value === "string" &&
+        (value.includes("YOUR_") || value.includes("<") || value.toLowerCase().includes("changeme"));
+
+    const safeUrl = typeof config.supabaseUrl === "string" && !isPlaceholder(config.supabaseUrl)
+        ? config.supabaseUrl.replace(/\/$/, "")
+        : "";
+    const safeKey = typeof config.supabaseAnonKey === "string" && !isPlaceholder(config.supabaseAnonKey)
+        ? config.supabaseAnonKey
+        : "";
+
+    return {
+        supabaseUrl: safeUrl,
+        supabaseAnonKey: safeKey,
+        userId: typeof config.userId === "string" && !isPlaceholder(config.userId) ? config.userId : "",
+        crmSync: config.crmSync !== false,
+        feedLimit: Number.isInteger(config.feedLimit) ? config.feedLimit : defaultFeedLimit
+    };
+}
 
 function deduplicateListings(listings) {
     const properties = [];
@@ -225,7 +414,12 @@ function createProperty(listing) {
                 lastBumpedAt: listing.lastBumpedAt
             }
         ],
-        priceHistory: normalizePriceHistory(listing.priceHistory, listing.source, listing.priceIls, listing.lastBumpedAt),
+        priceHistory: normalizePriceHistory(
+            listing.priceHistory,
+            listing.source,
+            listing.priceIls,
+            listing.lastBumpedAt
+        ),
         imageHashes: [...listing.imageHashes],
         matchConfidence: 0.62
     };
@@ -275,7 +469,8 @@ function finalizeProperty(property) {
 
 function computeMatch(candidate, anchor) {
     const addressScore = tokenSimilarity(candidate.address, anchor.address);
-    const neighborhoodScore = normalizeText(candidate.neighborhood) === normalizeText(anchor.neighborhood) ? 1 : 0;
+    const neighborhoodScore =
+        normalizeText(candidate.neighborhood) === normalizeText(anchor.neighborhood) ? 1 : 0;
     const locationScore = Math.max(addressScore, neighborhoodScore * 0.85);
     const floorScore = Number(candidate.floor) === Number(anchor.floor) ? 1 : 0;
     const priceGap = Math.abs(candidate.priceIls - anchor.priceIls) / Math.max(candidate.priceIls, anchor.priceIls);
@@ -290,11 +485,7 @@ function computeMatch(candidate, anchor) {
         priceGap <= 0.03 &&
         (imageScore >= 0.25 || neighborhoodScore === 1);
 
-    const confidence =
-        locationScore * 0.35 +
-        floorScore * 0.2 +
-        priceScore * 0.2 +
-        imageScore * 0.25;
+    const confidence = locationScore * 0.35 + floorScore * 0.2 + priceScore * 0.2 + imageScore * 0.25;
 
     return { isMatch, confidence };
 }
@@ -322,82 +513,6 @@ function mergePriceHistory(existingHistory, newHistory) {
     return Array.from(historyMap.values());
 }
 
-function renderFeed() {
-    const visibleProperties = unifiedProperties.filter((property) => {
-        if (activeFilter === "all") {
-            return true;
-        }
-        return computeAgeBadge(property.firstSpottedAt).bucket === activeFilter;
-    });
-
-    feedElement.innerHTML = "";
-
-    if (!visibleProperties.length) {
-        const emptyState = document.createElement("p");
-        emptyState.className = "empty-state";
-        emptyState.textContent = "No properties found for this filter.";
-        feedElement.appendChild(emptyState);
-        return;
-    }
-
-    visibleProperties.forEach((property) => {
-        const cardFragment = template.content.cloneNode(true);
-        const card = cardFragment.querySelector(".property-card");
-        card.dataset.propertyId = property.id;
-
-        const crmStatus = crmState[property.id] || "new";
-        if (crmStatus === "not_relevant") {
-            card.classList.add("muted");
-        }
-
-        const ageBadge = computeAgeBadge(property.firstSpottedAt);
-        const ageTag = card.querySelector(".age-tag");
-        ageTag.classList.add(ageBadge.className);
-        ageTag.textContent = ageBadge.label;
-
-        card.querySelector(".confidence-pill").textContent = `Match ${Math.round(
-            property.matchConfidence * 100
-        )}%`;
-        card.querySelector(".property-price").textContent = formatIls(property.currentPriceIls);
-        card.querySelector(".property-location").textContent = `${property.address}, ${property.neighborhood}`;
-        card.querySelector(".property-specs").textContent = `${property.rooms} rooms • ${property.sqm} sqm • floor ${property.floor}`;
-        card.querySelector(".first-spotted").textContent = formatDate(property.firstSpottedAt);
-        card.querySelector(".last-bumped").textContent = formatDate(property.lastBumpedAt);
-
-        const sourceList = card.querySelector(".source-list");
-        property.sourceListings.forEach((sourceListing) => {
-            sourceList.appendChild(buildSourceLink(sourceListing));
-        });
-
-        const historyList = card.querySelector(".price-history");
-        property.priceHistory.slice(0, 8).forEach((event) => {
-            const item = document.createElement("li");
-            item.textContent = `${formatDate(event.at)} - ${formatIls(event.priceIls)} (${SOURCE_META[event.source].label})`;
-            historyList.appendChild(item);
-        });
-
-        card.querySelectorAll("button[data-action]").forEach((button) => {
-            button.classList.toggle("active", button.dataset.action === crmStatus);
-        });
-
-        feedElement.appendChild(cardFragment);
-    });
-}
-
-function buildSourceLink(sourceListing) {
-    const sourceDetails = SOURCE_META[sourceListing.source];
-    const link = document.createElement("a");
-    link.className = `source-link ${sourceDetails.className}`;
-    link.href = sourceListing.deepLink;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.innerHTML = `
-        <span class="source-icon">${sourceDetails.icon}</span>
-        <span>${sourceDetails.label}</span>
-    `;
-    return link;
-}
-
 function computeAgeBadge(firstSpottedAt) {
     const ageHours = (Date.now() - Date.parse(firstSpottedAt)) / (1000 * 60 * 60);
     const ageDays = ageHours / 24;
@@ -419,7 +534,7 @@ function formatIls(value) {
         style: "currency",
         currency: "ILS",
         maximumFractionDigits: 0
-    }).format(value);
+    }).format(Number(value || 0));
 }
 
 function formatDate(value) {
@@ -480,8 +595,8 @@ function loadCRMState() {
     }
 }
 
-function saveCRMState(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveCRMState(stateObject) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateObject));
 }
 
 function minDate(left, right) {
@@ -494,4 +609,136 @@ function maxDate(left, right) {
 
 function uniqueStrings(values) {
     return Array.from(new Set(values));
+}
+
+function escapeHTML(input) {
+    return String(input || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function getMockListings() {
+    const now = Date.now();
+    const hoursAgo = (hours) => new Date(now - hours * 60 * 60 * 1000).toISOString();
+    const daysAgo = (days) => hoursAgo(days * 24);
+
+    return [
+        {
+            source: "facebook",
+            sourceListingId: "fb-9301",
+            deepLink: "https://facebook.com/groups/tel-aviv-rentals/posts/fb-9301",
+            city: "Tel Aviv",
+            neighborhood: "Florentin",
+            address: "32 Herzl Street",
+            floor: 2,
+            rooms: 3,
+            sqm: 68,
+            priceIls: 7600,
+            imageHashes: ["img-a1", "img-a2", "img-a3"],
+            firstSpottedAt: hoursAgo(11),
+            lastBumpedAt: hoursAgo(2),
+            priceHistory: [
+                { at: daysAgo(6), priceIls: 7900 },
+                { at: daysAgo(3), priceIls: 7800 },
+                { at: hoursAgo(11), priceIls: 7600 }
+            ]
+        },
+        {
+            source: "yad2",
+            sourceListingId: "y2-55812",
+            deepLink: "https://www.yad2.co.il/item/y2-55812",
+            city: "Tel Aviv",
+            neighborhood: "Florentin",
+            address: "32 Herzl St",
+            floor: 2,
+            rooms: 3,
+            sqm: 69,
+            priceIls: 7600,
+            imageHashes: ["img-a2", "img-a3", "img-a4"],
+            firstSpottedAt: hoursAgo(10),
+            lastBumpedAt: hoursAgo(3),
+            priceHistory: [
+                { at: daysAgo(2), priceIls: 7700 },
+                { at: hoursAgo(10), priceIls: 7600 }
+            ]
+        },
+        {
+            source: "madlan",
+            sourceListingId: "md-11290",
+            deepLink: "https://www.madlan.co.il/listings/md-11290",
+            city: "Tel Aviv",
+            neighborhood: "Florentin",
+            address: "Herzl 32",
+            floor: 2,
+            rooms: 3,
+            sqm: 68,
+            priceIls: 7600,
+            imageHashes: ["img-a1", "img-a3", "img-a5"],
+            firstSpottedAt: hoursAgo(9),
+            lastBumpedAt: hoursAgo(1),
+            priceHistory: [{ at: hoursAgo(9), priceIls: 7600 }]
+        },
+        {
+            source: "facebook",
+            sourceListingId: "fb-9314",
+            deepLink: "https://facebook.com/groups/tel-aviv-rentals/posts/fb-9314",
+            city: "Tel Aviv",
+            neighborhood: "Ramat Aviv",
+            address: "14 Brodetsky Street",
+            floor: 5,
+            rooms: 2.5,
+            sqm: 62,
+            priceIls: 8900,
+            imageHashes: ["img-b1", "img-b2", "img-b3"],
+            firstSpottedAt: daysAgo(11),
+            lastBumpedAt: daysAgo(2),
+            priceHistory: [
+                { at: daysAgo(11), priceIls: 9200 },
+                { at: daysAgo(5), priceIls: 9000 },
+                { at: daysAgo(2), priceIls: 8900 }
+            ]
+        },
+        {
+            source: "yad2",
+            sourceListingId: "y2-55899",
+            deepLink: "https://www.yad2.co.il/item/y2-55899",
+            city: "Tel Aviv",
+            neighborhood: "Ramat Aviv",
+            address: "14 Brodetsky St.",
+            floor: 5,
+            rooms: 2.5,
+            sqm: 61,
+            priceIls: 8900,
+            imageHashes: ["img-b2", "img-b4"],
+            firstSpottedAt: daysAgo(10.5),
+            lastBumpedAt: daysAgo(1),
+            priceHistory: [
+                { at: daysAgo(4), priceIls: 9000 },
+                { at: daysAgo(1), priceIls: 8900 }
+            ]
+        },
+        {
+            source: "madlan",
+            sourceListingId: "md-11002",
+            deepLink: "https://www.madlan.co.il/listings/md-11002",
+            city: "Givatayim",
+            neighborhood: "Borlov",
+            address: "7 Weizmann Street",
+            floor: 3,
+            rooms: 3,
+            sqm: 74,
+            priceIls: 6800,
+            imageHashes: ["img-c1", "img-c2"],
+            firstSpottedAt: daysAgo(45),
+            lastBumpedAt: daysAgo(32),
+            priceHistory: [
+                { at: daysAgo(45), priceIls: 7100 },
+                { at: daysAgo(38), priceIls: 6900 },
+                { at: daysAgo(32), priceIls: 6800 }
+            ]
+        }
+    ];
 }
